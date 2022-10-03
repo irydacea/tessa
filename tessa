@@ -1,0 +1,163 @@
+#!/usr/bin/env python3
+'''
+codename Tessa
+
+Copyright (C) 2022 by Iris Morelle <iris@irydacea.me>
+See COPYING for use and distribution terms.
+'''
+
+import argparse
+import asyncio
+import discord
+from jsonc_parser.parser import JsoncParser
+import jsonc_parser.errors
+import logging
+import os
+import sys
+from typing import Any, List, Literal, Dict, Mapping, Sequence
+
+from lib.diag import die
+import lib.log as log
+
+
+# Version number
+TESSA_VERSION = '0.0.1'
+
+# Configuration file path (override with -c/--config)
+CONFIG_FILE_PATH = './tessa.jsonc'
+
+# Maximum number of reactions allowed by Discord. Don't change this.
+MAX_REACTIONS = 20
+
+
+class TessaDiscordBot(discord.Client):
+    class ConfigError(Exception):
+        pass
+
+    class ParameterError(Exception):
+        pass
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    async def on_connect(self):
+        log.notice('Connected to Discord')
+
+    async def on_ready(self):
+        log.notice('Joined Discord as {}'.format(self.user))
+
+    async def on_message(self, message):
+        if message.author == self.user:
+            return
+        if message.guild.id not in self._monitor_guilds:
+            return
+        if message.channel.id not in self._monitor_guilds[message.guild.id]:
+            return
+
+        log.debug('Guild {} channel {} message {}'.format(message.guild.id, message.channel.id, message.id))
+
+        try:
+            # Clear existing reactions in case the bot is running behind other
+            # guild members' ability to react to messages
+            await message.clear_reactions()
+            # Discord wants us to add the reactions one by one sadly
+            for reaction in self._reactions:
+                new_reaction = discord.PartialEmoji.from_str(reaction)
+                log.debug('Reaction: emote {}:{}'.format(new_reaction.name, new_reaction.id) if ':' in reaction else 'Reaction: Unicode {}'.format(reaction))
+                await message.add_reaction(new_reaction)
+        except discord.NotFound as err:
+            log.error('Invalid or missing reaction emoji: {}'.format(err.text))
+        except discord.RateLimited as err:
+            # This is global so may as well block the entire client on this
+            log.error('Discord rate limit exceeded, waiting {}s'.format(err.retry_after))
+            await asyncio.sleep(err.retry_after)
+        except discord.HTTPException as err:
+            log.error('Discord error adding reaction to message {}: {} {}'.format(message.id, err.status, err.text))
+
+    def read_config(self, config):
+        if 'monitor' in config:
+            self.set_monitor_targets(config['monitor'])
+        else:
+            log.warning('No targets to monitor have been configured')
+            return
+        if 'reactions' in config:
+            self.set_reactions(config['reactions'])
+        else:
+            log.warning('No reaction emojis have been configured')
+            return
+
+    def set_reactions(self, reactions: Sequence[str]):
+        # These checks are really only here to catch configuration mistakes. If
+        # Discord limits change we'll let the user off the hook otherwise.
+        if len(reactions) > MAX_REACTIONS:
+            log.warning('Excessive number of reaction emojis ({} > {})'.format(len(reactions), MAX_REACTIONS))
+        elif reactions == 0:
+            log.warning('No reaction emojis configured, kind of silly')
+        self._reactions = reactions
+
+    def set_monitor_targets(self, guilds: Mapping[str, Sequence[str]]):
+        self._monitor_guilds = {}
+        for guild_id, guild_channels in guilds.items():
+            num_guild = int(guild_id)
+            self._monitor_guilds[num_guild] = []
+            for guild_channel in guild_channels:
+                num_channel = int(guild_channel)
+                log.info('Monitoring guild {} channel {}'.format(num_guild, num_channel))
+                # Do a quick validation because, you know, mistakes happen
+                if not num_guild or not num_channel:
+                    raise TessaDiscordBot.ConfigError()
+                self._monitor_guilds[num_guild].append(num_channel)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d, --debug', action='store_true', dest='debug',
+                        default=False,
+                        help='prints extra debugging information')
+    parser.add_argument('-v', '--verbose', action='store_true', dest='verbose',
+                        default=False,
+                        help='prints more information about actions')
+    parser.add_argument('-c', '--config', action='store', type=str, dest='config',
+                        default=CONFIG_FILE_PATH,
+                        help='specifies the path to the Tessa configuration JSON file')
+    args = parser.parse_args()
+
+    print('''codename "Tessa" version {0}
+
+    Config file path: {1.config}
+'''.format(TESSA_VERSION, args))
+
+    logging.basicConfig(level=logging.WARNING)
+
+    if args.verbose:
+        log.set_log_level(log.LOG_LEVEL_INFO)
+        logging.basicConfig(level=logging.INFO)
+    if args.debug:
+        log.set_log_level(log.LOG_LEVEL_DEBUG)
+        logging.basicConfig(level=logging.DEBUG)
+
+    config_fn = args.config
+    config = None
+
+    try:
+        config = JsoncParser.parse_file(config_fn)
+    except (jsonc_parser.errors.FileError, jsonc_parser.errors.ParserError) as err:
+        log.error('Could not read configuration from {}: {}'.format(config_fn, err))
+        sys.exit(1)
+
+    discord_token = config.get('token', None)
+    if discord_token is None:
+        log.error('No Discord bot token specified in the config file. Cannot continue.')
+        sys.exit(1)
+
+    intents = discord.Intents(guilds=True, guild_messages=True)
+    #if args.debug:
+    #    intents.message_content = True
+
+    client = TessaDiscordBot(intents=intents)
+    client.read_config(config)
+    client.run(discord_token)
+
+
+if __name__ == '__main__':
+    main()

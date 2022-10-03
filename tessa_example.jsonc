@@ -1,0 +1,41 @@
+{
+	//
+	// Discord bot token
+	//
+	// This is SENSITIVE INFORMATION and it should NEVER be shared with anyone
+	// as it will allow others to log in as the bot.
+	//
+	"token": "SECRET TOKEN",
+
+	//
+	// Monitoring targets
+	//
+	// All guild and channel ids are integers that may be obtained by enabling
+	// Developer Mode in the client and right clicking on guilds/channels and
+	// selecting the Copy ID option from the popup menu.
+	//
+	"monitor": {
+		"GUILD ID 1": [
+			"CHANNEL ID 1",
+			"CHANNEL ID 2"
+		],
+		"GUILD ID 2": [
+			"CHANNEL ID 3"
+		]
+	},
+
+	//
+	// Set of reaction emojis to add to messages
+	//
+	// A maximum of 20 emojis may be used. Custom guild emojis may be provided
+	// in ":name:ID" format, which can be obtained by preceding the emoji with
+	// a backslash when entering it in the client.
+	//
+	"reactions": [
+		"💜",
+		":chickenemote:882609179460775936",
+		"👀",
+		"💎",
+		"🐚"
+	]
+}
