@@ -68,6 +68,8 @@ class TessaDiscordBot(discord.Client):
             return
         if not self._is_auto_react_channel(message.guild, message.channel):
             return
+        if not self._reactions:
+            return
 
         log.debug(f'Guild {message.guild.id} channel {message.channel.id} message {message.id}')
 
@@ -101,6 +103,8 @@ class TessaDiscordBot(discord.Client):
             return
         message = reaction.message
         if not self._is_moderated_channel(message.guild, message.channel):
+            return
+        if not self._banned_reactions:
             return
 
         log.debug(f'Reaction {reaction!s} on guild {message.guild.id} channel {message.channel.id} message {message.id}')
@@ -218,12 +222,10 @@ class TessaDiscordBot(discord.Client):
             self.set_reactions(config['reactions'])
         else:
             log.warning('No reaction emojis have been configured')
-            return
         if 'banned_reactions' in config:
             self.set_banned_reactions(config['banned_reactions'])
         else:
             log.warning('No banned reaction emojis have been configured')
-            return
 
     def set_reactions(self, reactions: Sequence[str]):
         # These checks are really only here to catch configuration mistakes. If
