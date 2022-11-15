@@ -58,7 +58,7 @@ class TessaDiscordBot(discord.Client):
         log.notice('Connected to Discord')
 
     async def on_ready(self):
-        log.notice('Joined Discord as {}'.format(self.user))
+        log.notice(f'Joined Discord as {self.user}')
 
     async def on_message(self, message):
         '''
@@ -69,7 +69,7 @@ class TessaDiscordBot(discord.Client):
         if not self._is_auto_react_channel(message.guild, message.channel):
             return
 
-        log.debug('Guild {} channel {} message {}'.format(message.guild.id, message.channel.id, message.id))
+        log.debug(f'Guild {message.guild.id} channel {message.channel.id} message {message.id}')
 
         try:
             # Clear existing reactions in case the bot is running behind other
@@ -78,17 +78,17 @@ class TessaDiscordBot(discord.Client):
             # Discord wants us to add the reactions one by one sadly
             for reaction in self._reactions:
                 new_reaction = discord.PartialEmoji.from_str(reaction)
-                log.debug('Reaction: emote {}:{}'.format(new_reaction.name, new_reaction.id) if ':' in reaction else 'Reaction: Unicode {}'.format(reaction))
+                log.debug(f'Reaction: emote {new_reaction.name}:{new_reaction.id}' if ':' in reaction else f'Reaction: Unicode {reaction}')
                 reaction_exec = asyncio.create_task(message.add_reaction(new_reaction))
                 await reaction_exec
         except discord.NotFound as err:
-            log.error('Invalid or missing reaction emoji: {}'.format(err.text))
+            log.error(f'Invalid or missing reaction emoji: {err.text}')
         except discord.RateLimited as err:
             # This is global so may as well block the entire client on this
-            log.error('Discord rate limit exceeded, waiting {}s'.format(err.retry_after))
+            log.error(f'Discord rate limit exceeded, waiting {err.retry_after}s')
             await asyncio.sleep(err.retry_after)
         except discord.HTTPException as err:
-            log.error('Discord error adding reaction to message {}: {} {}'.format(message.id, err.status, err.text))
+            log.error(f'Discord error adding reaction to message {message.id}: {err.status} {err.text}')
 
     async def on_reaction_add(self, reaction, user):
         '''
@@ -103,7 +103,7 @@ class TessaDiscordBot(discord.Client):
         if not self._is_moderated_channel(message.guild, message.channel):
             return
 
-        log.debug('Reaction {} on guild {} channel {} message {}'.format(str(reaction)[0], message.guild.id, message.channel.id, message.id))
+        log.debug(f'Reaction {reaction!s} on guild {message.guild.id} channel {message.channel.id} message {message.id}')
 
         naughty = False
         emoji = str(reaction)
@@ -126,7 +126,7 @@ class TessaDiscordBot(discord.Client):
         if not naughty:
             return
 
-        log.debug('Banned reaction {} found on guild {} channel {} message {}'.format(str(reaction), message.guild.id, message.channel.id, message.id))
+        log.debug(f'Banned reaction {reaction!s} found on guild {message.guild.id} channel {message.channel.id} message {message.id}')
         # NOTE: we need to log the situation first, otherwise the list of users
         #       who reacted to the message is lost
         await self._do_modlog_reaction(message.guild, reaction)
@@ -139,8 +139,8 @@ class TessaDiscordBot(discord.Client):
             return
         # Odds are there's only gonna be one mention, but anyway
         reactor_mentions = ', '.join([user.mention async for user in reaction.users()])
-        embed_body = ('**Deleted bad reaction in {!s} by {!s}**\n' +
-                     '{!s} - [Jump to message]({!s})').format(reaction.message.channel.mention, reactor_mentions, reaction, reaction.message.jump_url)
+        embed_body = (f'**Deleted bad reaction in {reaction.message.channel.mention!s} by {reactor_mentions!s}**\n'
+                      f'{reaction!s} - [Jump to message]({reaction.message.jump_url!s})')
         log_embed = discord.Embed(
             colour=discord.Colour.fuchsia(),
             description=embed_body,
@@ -186,7 +186,7 @@ class TessaDiscordBot(discord.Client):
                 if not guild_id: # Validation
                     raise TessaDiscordBot.ConfigError()
                 if not guild_cfg.get('enabled', True):
-                    log.debug('Skipping guild {} disabled by configuration'.format(guild_id))
+                    log.debug(f'Skipping guild {guild_id} disabled by configuration')
                     continue
                 self._guilds[guild_id] = {
                     'event_log': int(guild_cfg.get('event_log', 0)),
@@ -204,13 +204,13 @@ class TessaDiscordBot(discord.Client):
                     auto_reactions = bool(channel_cfg.get('auto_reactions', False))
                     moderate_reactions = bool(channel_cfg.get('moderate_reactions', False))
                     if not auto_reactions and not moderate_reactions:
-                        log.debug('Skipping channel {} with no enabled actions'.format(channel_id))
+                        log.debug(f'Skipping channel {channel_id} with no enabled actions')
                         continue
                     self._guilds[guild_id]['channels'][channel_id] = {
                         'auto_reactions':     auto_reactions,
                         'moderate_reactions': moderate_reactions,
                     }
-                    log.info('Monitoring guild {} channel {} (auto reactions: {}, moderate reactions: {}'.format(guild_id, channel_id, auto_reactions, moderate_reactions))
+                    log.info(f'Monitoring guild {guild_id} channel {channel_id} (auto reactions: {auto_reactions}, moderate reactions: {moderate_reactions}')
         else:
             log.warning('No guilds have been configured')
             return
@@ -229,7 +229,7 @@ class TessaDiscordBot(discord.Client):
         # These checks are really only here to catch configuration mistakes. If
         # Discord limits change we'll let the user off the hook otherwise.
         if len(reactions) > MAX_REACTIONS:
-            log.warning('Excessive number of reaction emojis ({} > {})'.format(len(reactions), MAX_REACTIONS))
+            log.warning(f'Excessive number of reaction emojis ({len(reactions)} > {MAX_REACTIONS})')
         elif not reactions:
             log.warning('No reaction emojis configured, kind of silly')
         self._reactions = reactions
@@ -251,10 +251,10 @@ def main():
                         help='specifies the path to the Tessa configuration JSON file')
     args = parser.parse_args()
 
-    print('''codename "Tessa" version {0}
+    print(f'''codename "Tessa" version {TESSA_VERSION}
 
-    Config file path: {1.config}
-'''.format(TESSA_VERSION, args))
+    Config file path: {args.config}
+''')
 
     logging.basicConfig(level=logging.WARNING)
 
@@ -271,7 +271,7 @@ def main():
     try:
         config = JsoncParser.parse_file(config_fn)
     except (jsonc_parser.errors.FileError, jsonc_parser.errors.ParserError) as err:
-        log.error('Could not read configuration from {}: {}'.format(config_fn, err))
+        log.error(f'Could not read configuration from {config_fn}: {err}')
         sys.exit(1)
 
     discord_token = config.get('token', None)
