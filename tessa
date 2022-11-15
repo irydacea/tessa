@@ -40,7 +40,10 @@ class TessaDiscordBot(discord.Client):
     def __init__(self, *args, **kwargs):
         self._reactions = []
         self._monitor_guilds = {}
-        super().__init__(*args, **kwargs)
+
+        intents = discord.Intents(guilds=True, guild_messages=True, guild_reactions=True)
+
+        super().__init__(*args, **kwargs, intents=intents)
 
     async def on_connect(self):
         log.notice('Connected to Discord')
@@ -152,11 +155,7 @@ def main():
         log.error('No Discord bot token specified in the config file. Cannot continue.')
         sys.exit(1)
 
-    intents = discord.Intents(guilds=True, guild_messages=True)
-    #if args.debug:
-    #    intents.message_content = True
-
-    client = TessaDiscordBot(intents=intents)
+    client = TessaDiscordBot()
     client.read_config(config)
     client.run(discord_token)
 
