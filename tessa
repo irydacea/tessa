@@ -42,8 +42,10 @@ class TessaDiscordBot(discord.Client):
         self._monitor_guilds = {}
 
         intents = discord.Intents(guilds=True, guild_messages=True, guild_reactions=True)
+        act = discord.Game(name='with your feelings')
+        status = discord.Status.dnd
 
-        super().__init__(*args, **kwargs, intents=intents)
+        super().__init__(*args, **kwargs, intents=intents, activity=act, status=status)
 
     async def on_connect(self):
         log.notice('Connected to Discord')
