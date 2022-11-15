@@ -38,7 +38,13 @@ class TessaDiscordBot(discord.Client):
         pass
 
     def __init__(self, *args, **kwargs):
+        '''
+        Constructor.
+
+        It sets the bot's intents and initial Discord status and activity.
+        '''
         self._reactions = []
+        self._banned_reactions = []
         self._monitor_guilds = {}
 
         intents = discord.Intents(guilds=True, guild_messages=True, guild_reactions=True)
@@ -54,6 +60,9 @@ class TessaDiscordBot(discord.Client):
         log.notice('Joined Discord as {}'.format(self.user))
 
     async def on_message(self, message):
+        '''
+        Handles posting of automatic reactions to new messages.
+        '''
         if message.author == self.user:
             return
         if message.guild.id not in self._monitor_guilds:
@@ -82,7 +91,52 @@ class TessaDiscordBot(discord.Client):
         except discord.HTTPException as err:
             log.error('Discord error adding reaction to message {}: {} {}'.format(message.id, err.status, err.text))
 
+    async def on_reaction_add(self, reaction, user):
+        '''
+        Handles moderation of user reactions to messages.
+        '''
+        # NOTE: We use on_reaction_add here, not on_raw_reaction_add, so there's a risk
+        #       that reactions on uncached messages will happen and we won't hear of them.
+        #       For our use case this is a good enough compromise.
+        if reaction.me:
+            return
+        message = reaction.message
+        if message.guild.id not in self._monitor_guilds:
+            return
+        if message.channel.id not in self._monitor_guilds[message.guild.id]:
+            return
+
+        log.debug('Reaction {} on guild {} channel {} message {}'.format(str(reaction)[0], message.guild.id, message.channel.id, message.id))
+
+        naughty = False
+        emoji = str(reaction)
+        if not emoji:
+            log.notice('Reaction is an empty string, is discord okay?')
+            return
+        # Anything non-ASCII can't be a Discord implementation detail so it's
+        # got to be an emoji right?
+        if ord(emoji[0]) > 0x7F:
+            # NOTE: We're really just trying to ignore emoji modifiers. This is
+            # a very dirty hack but it should work for our use case.
+            for char in emoji:
+                if char in self._banned_reactions:
+                    naughty = True
+                    break
+        # Otherwise compare the sequence wholesale
+        elif emoji in self._banned_reactions:
+            naughty = True
+
+        if not naughty:
+            return
+
+        log.debug('Banned reaction {} found on guild {} channel {} message {}'.format(str(reaction), message.guild.id, message.channel.id, message.id))
+        # TODO: REPEAT UNTIL THE REACTION IS FULLY GONE
+        await message.clear_reaction(reaction)
+
     def read_config(self, config):
+        '''
+        Processes the configuration JSON data.
+        '''
         if 'monitor' in config:
             self.set_monitor_targets(config['monitor'])
         else:
@@ -93,6 +147,11 @@ class TessaDiscordBot(discord.Client):
         else:
             log.warning('No reaction emojis have been configured')
             return
+        if 'banned_reactions' in config:
+            self.set_banned_reactions(config['banned_reactions'])
+        else:
+            log.warning('No banned reaction emojis have been configured')
+            return
 
     def set_reactions(self, reactions: Sequence[str]):
         # These checks are really only here to catch configuration mistakes. If
@@ -102,6 +161,9 @@ class TessaDiscordBot(discord.Client):
         elif not reactions:
             log.warning('No reaction emojis configured, kind of silly')
         self._reactions = reactions
+
+    def set_banned_reactions(self, reactions: Sequence[str]):
+        self._banned_reactions = reactions
 
     def set_monitor_targets(self, guilds: Mapping[str, Sequence[str]]):
         for guild_id, guild_channels in guilds.items():
