@@ -139,9 +139,11 @@ class TessaDiscordBot(discord.Client):
             return
         # Odds are there's only gonna be one mention, but anyway
         reactor_mentions = ', '.join([user.mention async for user in reaction.users()])
+        embed_body = ('**Deleted bad reaction in {!s} by {!s}**\n' +
+                     '{!s} - [Jump to message]({!s})').format(reaction.message.channel.mention, reactor_mentions, reaction, reaction.message.jump_url)
         log_embed = discord.Embed(
             colour=discord.Colour.fuchsia(),
-            description='**Deleted bad reaction in {!s} by {!s}:** {!s}'.format(reaction.message.channel.mention, reactor_mentions, reaction),
+            description=embed_body,
             timestamp=datetime.datetime.now())
         modlog_channel = await guild.fetch_channel(modlog_cid)
         await modlog_channel.send(embed=log_embed)
