@@ -91,7 +91,7 @@ class TessaDiscordBot(discord.Client):
         # Discord limits change we'll let the user off the hook otherwise.
         if len(reactions) > MAX_REACTIONS:
             log.warning('Excessive number of reaction emojis ({} > {})'.format(len(reactions), MAX_REACTIONS))
-        elif reactions == 0:
+        elif not reactions:
             log.warning('No reaction emojis configured, kind of silly')
         self._reactions = reactions
 
