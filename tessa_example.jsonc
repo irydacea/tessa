@@ -14,14 +14,23 @@
 	// Developer Mode in the client and right clicking on guilds/channels and
 	// selecting the Copy ID option from the popup menu.
 	//
-	"monitor": {
-		"GUILD ID 1": [
-			"CHANNEL ID 1",
-			"CHANNEL ID 2"
-		],
-		"GUILD ID 2": [
-			"CHANNEL ID 3"
-		]
+	"guilds": {
+		"GUILD ID 1": {
+			"event_log": "CHANNEL ID FOR MODERATION EVENT LOGGING", // default: 0 (no logging)
+			"CHANNEL ID 1": {
+				"auto_reactions": true, // default: false
+				"moderate_reactions": false // default: false
+			},
+			"CHANNEL ID 2": {
+				"auto_reactions": true,
+				"moderate_reactions": true
+			}
+		},
+		"GUILD ID 2": {
+			"CHANNEL ID 3": {
+				"moderate_reactions": true
+			}
+		}
 	},
 
 	//
