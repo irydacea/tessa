@@ -8,15 +8,15 @@ See COPYING for use and distribution terms.
 
 import argparse
 import asyncio
-import discord
-from jsonc_parser.parser import JsoncParser
-import jsonc_parser.errors
 import logging
-import os
 import sys
 from typing import Any, List, Literal, Dict, Mapping, Sequence
 
-from lib.diag import die
+import discord
+from jsonc_parser.parser import JsoncParser
+import jsonc_parser.errors
+
+#from lib.diag import die
 import lib.log as log
 
 
@@ -38,6 +38,8 @@ class TessaDiscordBot(discord.Client):
         pass
 
     def __init__(self, *args, **kwargs):
+        self._reactions = []
+        self._monitor_guilds = {}
         super().__init__(*args, **kwargs)
 
     async def on_connect(self):
@@ -96,7 +98,6 @@ class TessaDiscordBot(discord.Client):
         self._reactions = reactions
 
     def set_monitor_targets(self, guilds: Mapping[str, Sequence[str]]):
-        self._monitor_guilds = {}
         for guild_id, guild_channels in guilds.items():
             num_guild = int(guild_id)
             self._monitor_guilds[num_guild] = []
