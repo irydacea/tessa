@@ -66,7 +66,8 @@ class TessaDiscordBot(discord.Client):
             for reaction in self._reactions:
                 new_reaction = discord.PartialEmoji.from_str(reaction)
                 log.debug('Reaction: emote {}:{}'.format(new_reaction.name, new_reaction.id) if ':' in reaction else 'Reaction: Unicode {}'.format(reaction))
-                await message.add_reaction(new_reaction)
+                reaction_exec = asyncio.create_task(message.add_reaction(new_reaction))
+                await reaction_exec
         except discord.NotFound as err:
             log.error('Invalid or missing reaction emoji: {}'.format(err.text))
         except discord.RateLimited as err:
