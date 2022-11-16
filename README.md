@@ -5,7 +5,7 @@ reactions to any message posted in the specified channels.
 
 ## Installation
 
-The minimum required interpreter version is **Python 3.6**.
+The minimum required interpreter version is **Python 3.9**.
 
 There are a few required dependencies that need to be installed first for
 `tessa` to run correctly:
