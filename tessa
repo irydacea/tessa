@@ -11,7 +11,7 @@ import asyncio
 import datetime
 import logging
 import sys
-from typing import Any, Dict, Optional, Mapping
+from typing import Any, Dict, List, Optional, Mapping
 
 import discord
 from jsonc_parser.parser import JsoncParser
@@ -51,9 +51,9 @@ class TessaDiscordBot(discord.Client):
 
         It sets the bot's intents and initial Discord status and activity.
         '''
-        self._reactions = []
-        self._banned_reactions = []
         self._guilds = {}
+        self._autoemoji = {}
+        self._bademoji = {}
 
         intents = discord.Intents(guilds=True, guild_messages=True, guild_reactions=True)
         act = discord.Game(name='with your feelings')
@@ -81,7 +81,8 @@ class TessaDiscordBot(discord.Client):
             return
         if not self._is_auto_react_channel(message.guild, message.channel):
             return
-        if not self._reactions:
+        autoemoji = self._channel_autoemoji(message.guild, message.channel)
+        if not autoemoji:
             return
 
         log.debug(f'Guild {message.guild.id} channel {message.channel.id} '
@@ -92,7 +93,7 @@ class TessaDiscordBot(discord.Client):
             # guild members' ability to react to messages
             await message.clear_reactions()
             # Discord wants us to add the reactions one by one sadly
-            for reaction in self._reactions:
+            for reaction in autoemoji:
                 new_reaction = discord.PartialEmoji.from_str(reaction)
                 log.debug(f'Reaction: emote {new_reaction.name}:{new_reaction.id}' if ':' in reaction else f'Reaction: Unicode {reaction}')
                 reaction_exec = asyncio.create_task(message.add_reaction(new_reaction))
@@ -118,7 +119,8 @@ class TessaDiscordBot(discord.Client):
         message = reaction.message
         if not self._is_moderated_channel(message.guild, message.channel):
             return
-        if not self._banned_reactions:
+        bademoji = self._channel_bademoji(message.guild, message.channel)
+        if not bademoji:
             return
 
         log.debug(f'Reaction {reaction!s} on guild {message.guild.id} '
@@ -135,11 +137,11 @@ class TessaDiscordBot(discord.Client):
             # NOTE: We're really just trying to ignore emoji modifiers. This is
             # a very dirty hack but it should work for our use case.
             for char in emoji:
-                if char in self._banned_reactions:
+                if char in bademoji:
                     naughty = True
                     break
         # Otherwise compare the sequence wholesale
-        elif emoji in self._banned_reactions:
+        elif emoji in bademoji:
             naughty = True
 
         if not naughty:
@@ -191,6 +193,28 @@ class TessaDiscordBot(discord.Client):
         else:
             return None
 
+    def _channel_autoemoji(self, guild, channel) -> List:
+        '''
+        Retrieves the banned emojis list for the channel.
+        '''
+        cfg = self._channel_config(guild, channel)
+        if cfg:
+            preset = cfg.get('preset', '')
+            if preset:
+                return self._autoemoji.get(preset, [])
+        return []
+
+    def _channel_bademoji(self, guild, channel) -> List:
+        '''
+        Retrieves the banned emojis list for the channel.
+        '''
+        cfg = self._channel_config(guild, channel)
+        if cfg:
+            preset = cfg.get('preset', '')
+            if preset:
+                return self._bademoji.get(preset, [])
+        return []
+
     def _is_auto_react_channel(self, guild, channel) -> bool:
         '''
         Helper method to check if a guild+channel pair should have automatic reactions.
@@ -209,7 +233,31 @@ class TessaDiscordBot(discord.Client):
         '''
         Processes the configuration JSON data.
         '''
+        #
+        # Emoji presets (optional)
+        #
+        if 'presets' in config:
+            presets = config['presets']
+            for key, preset_cfg in presets.items():
+                preset_id = str(key) # Just to make sure it's all nice for later
+                autoemoji = preset_cfg.get('reactions', [])
+                bademoji = preset_cfg.get('banned_reactions', [])
+                if len(autoemoji) > MAX_REACTIONS:
+                    log.warning(f'Excessive number of reaction emojis ({len(autoemoji)} > {MAX_REACTIONS})')
+                # May copy empty lists. This is intentional so we know they
+                # are empty for later. We ensure this way that both preset
+                # dicts have the same keys.
+                self._autoemoji[preset_id] = autoemoji.copy()
+                self._bademoji[preset_id] = bademoji.copy()
+                if not autoemoji and not bademoji:
+                    log.warning(f'Emoji preset {preset_id} has no automatic or '
+                                f'banned emoji configured, might be unintentional')
+                else:
+                    log.info(f'Added emoji preset {preset_id} with {len(autoemoji)} automatic '
+                             f'and {len(bademoji)} banned emoji')
+        #
         # Main guild configuration (required)
+        #
         if 'guilds' in config:
             guilds = config['guilds']
             for guild_id_str, guild_cfg in guilds.items():
@@ -219,6 +267,12 @@ class TessaDiscordBot(discord.Client):
                 if not guild_cfg.get('enabled', True):
                     log.debug(f'Skipping guild {guild_id} disabled by configuration')
                     continue
+                guild_preset = str(guild_cfg.get('preset', ''))
+                # We only need to look at one of the emoji preset dicts because
+                # of the way we built them earlier.
+                if guild_preset and guild_preset not in self._autoemoji:
+                    log.error(f'Unknown preset {guild_preset} set to guild default')
+                # TODO: maybe record guild preset for future reference?
                 self._guilds[guild_id] = {
                     'event_log': int(guild_cfg.get('event_log', 0)),
                     'channels':  {}
@@ -232,41 +286,31 @@ class TessaDiscordBot(discord.Client):
                     channel_id = int(key)
                     if not channel_id: # Validation
                         raise TessaDiscordBot.ConfigError()
+                    preset = str(channel_cfg.get('preset', guild_preset))
                     auto_reactions = bool(channel_cfg.get('auto_reactions', False))
                     moderate_reactions = bool(channel_cfg.get('moderate_reactions', False))
+                    if not preset:
+                        log.debug(f'Skipping channel {channel_id} with no configured preset')
+                        continue
+                    if preset not in self._autoemoji:
+                        log.debug(f'Skipping channel {channel_id} with unknown preset {preset}')
+                        continue
                     if not auto_reactions and not moderate_reactions:
                         log.debug(f'Skipping channel {channel_id} with no enabled actions')
                         continue
                     self._guilds[guild_id]['channels'][channel_id] = {
                         'auto_reactions':     auto_reactions,
                         'moderate_reactions': moderate_reactions,
+                        'preset':             preset,
                     }
                     log.info(f'Monitoring guild {guild_id} channel {channel_id} '
-                             f'(auto reactions: {auto_reactions}, '
-                             f'moderate reactions: {moderate_reactions}')
+                             f'(preset: {preset} '
+                             f'auto reactions: {auto_reactions}, '
+                             f'moderate reactions: {moderate_reactions})')
         else:
             log.error('No guilds have been configured')
             # We really have nothing to do AT ALL without guilds
-            return
-
-        # Automatic reaction emojis configuration
-        if 'reactions' in config:
-            reactions = config['reactions']
-            # These checks are really only here to catch configuration mistakes. If
-            # Discord limits change we'll let the user off the hook otherwise.
-            if len(reactions) > MAX_REACTIONS:
-                log.warning(f'Excessive number of reaction emojis ({len(reactions)} > {MAX_REACTIONS})')
-            elif not reactions:
-                log.warning('No automatic reaction emojis have been configured')
-            self._reactions = reactions.copy()
-        else:
-            log.warning('No reaction emojis have been configured')
-
-        # Banned reaction emojis configuration
-        if 'banned_reactions' in config:
-            self._banned_reactions = config['banned_reactions'].copy()
-        else:
-            log.warning('No banned reaction emojis have been configured')
+            #return
 
 
 def main():

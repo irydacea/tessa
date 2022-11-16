@@ -8,47 +8,68 @@
 	"token": "SECRET TOKEN",
 
 	//
-	// Monitoring targets
+	// Monitored guilds and channels
 	//
 	// All guild and channel ids are integers that may be obtained by enabling
 	// Developer Mode in the client and right clicking on guilds/channels and
 	// selecting the Copy ID option from the popup menu.
 	//
 	"guilds": {
-		"GUILD ID 1": {
+		// Guild configuration table, using the guild's numeric identifier as
+		// the key. Multiple guilds can be configured, all with their own
+		// guild identifier.
+		"12345678901234567890": {
+			// Emoji configuration preset to use by default for monitored
+			// channels in this guild. It may be overridden on a channel basis
+			// by specifying `"preset": "<preset name>"` in the channel's own
+			// configuration table. If no preset is specified for the guild,
+			// then it is required for all channels to specify their own.
+			// (default value: none)
+			"preset": "Example Preset",
+			// Channel to use for logging moderation events in this guild.
+			// The channel should be accessible only to moderators but this is
+			// not enforced.
 			"event_log": "CHANNEL ID FOR MODERATION EVENT LOGGING", // default: 0 (no logging)
-			"CHANNEL ID 1": {
-				"auto_reactions": true, // default: false
-				"moderate_reactions": false // default: false
-			},
-			"CHANNEL ID 2": {
+			// Per-channel configuration tables, using the channel's numeric
+			// identifier as the key. Multiple channels can be configured, all
+			// with their own channel identifier.
+			"12345678901234567890": {
+				// Enables or disables automatic adding of reactions to any
+				// newly posted messages on the channel.
+				// (default value: false)
 				"auto_reactions": true,
-				"moderate_reactions": true
-			}
-		},
-		"GUILD ID 2": {
-			"CHANNEL ID 3": {
-				"moderate_reactions": true
+				// Enables or disables moderation of reactions by other users
+				// to any newly posted messages on the channel.
+				// (default value: false)
+				"moderate_reactions": false,
+				// Overrides the guild's emoji configuration preset if one was
+				// specified.
+				// (default value: guild's preset or none)
+				"preset": "Another Example Preset"
 			}
 		}
 	},
 
 	//
-	// Set of reaction emojis to add to messages
+	// Emoji configuration presets
 	//
-	// A maximum of 20 emojis may be used. Custom guild emojis may be provided
-	// in ":name:ID" format, which can be obtained by preceding the emoji with
-	// a backslash when entering it in the client.
-	//
-	"reactions": [
-		"💜",
-		":chickenemote:882609179460775936",
-		"👀",
-		"💎",
-		"🐚"
-	],
-
-	"banned_reactions": [
-
-	]
+	"presets": {
+		// Preset names are free-form case-sensitive strings.
+		"Example Preset": {
+			// Automatic reaction emojis:
+			// A maximum of 20 emojis may be used. Custom guild emojis may be provided
+			// in ":name:ID" format, which can be obtained by preceding the emoji with
+			// a backslash when entering it in the client.
+			"reactions": [
+				"💜", ":chickenemote:882609179460775936", "👀", "💎"
+			],
+			// Banned reaction emojis:
+			// These will be automatically deleted in channels that have
+			// reaction moderation enabled. As with automatic reaction
+			// emojis, custom guild emojis may be provided as ":name:ID".
+			"banned_reactions": [
+				"💩", "🍆", "🍑", "🍒"
+			]
+		}
+	}
 }
