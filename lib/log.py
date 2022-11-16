@@ -27,7 +27,7 @@ _LOG_TS_FORMAT = '%Y-%m-%d %H:%M:%S'
 _log_level = LOG_LEVEL_NOTICE
 
 
-def write(level, msg):
+def write(level: int, msg: str):
     """
     Writes a formatted log message to stderr with the specified log level.
 
@@ -43,7 +43,7 @@ def write(level, msg):
     sys.stderr.write("{} [{} {}] {}\n".format(marker, ts, desc, msg))
 
 
-def set_log_level(new_level):
+def set_log_level(new_level: int):
     """
     Sets the log level.
     """
@@ -59,49 +59,49 @@ def log_level():
     return _log_level
 
 
-def critical(msg):
+def critical(msg: str):
     """
     Outputs a message with LOG_LEVEL_CRIT severity.
     """
     write(LOG_LEVEL_CRIT, msg)
 
 
-def error(msg):
+def error(msg: str):
     """
     Outputs a message with LOG_LEVEL_ERR severity.
     """
     write(LOG_LEVEL_ERR, msg)
 
 
-def warning(msg):
+def warning(msg: str):
     """
     Outputs a message with LOG_LEVEL_WARN severity.
     """
     write(LOG_LEVEL_WARN, msg)
 
 
-def notice(msg):
+def notice(msg: str):
     """
     Outputs a message with LOG_LEVEL_NOTICE severity.
     """
     write(LOG_LEVEL_NOTICE, msg)
 
 
-def info(msg):
+def info(msg: str):
     """
     Outputs a message with LOG_LEVEL_INFO severity.
     """
     write(LOG_LEVEL_INFO, msg)
 
 
-def debug(msg):
+def debug(msg: str):
     """
     Outputs a message with LOG_LEVEL_DEBUG severity.
     """
     write(LOG_LEVEL_DEBUG, msg)
 
 
-def trace(msg):
+def trace(msg: str):
     """
     Outputs a message with LOG_LEVEL_TRACE severity.
     """

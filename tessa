@@ -11,7 +11,7 @@ import asyncio
 import datetime
 import logging
 import sys
-from typing import Any, Dict, List, Optional, Mapping
+from typing import Any, Dict, List, Optional, Mapping, Union
 
 import discord
 from jsonc_parser.parser import JsoncParser
@@ -29,6 +29,11 @@ CONFIG_FILE_PATH = './tessa.jsonc'
 
 # Maximum number of reactions allowed by Discord. Don't change this.
 MAX_REACTIONS = 20
+
+
+DiscordChannel = Union[discord.TextChannel, discord.VoiceChannel,
+                       discord.Thread, discord.DMChannel, discord.GroupChannel,
+                       discord.PartialMessageable]
 
 
 class TessaDiscordBot(discord.Client):
@@ -73,7 +78,7 @@ class TessaDiscordBot(discord.Client):
         '''
         log.notice(f'Joined Discord as {self.user}')
 
-    async def on_message(self, message):
+    async def on_message(self, message: discord.Message):
         '''
         Handles posting of automatic reactions to new messages.
         '''
@@ -107,7 +112,7 @@ class TessaDiscordBot(discord.Client):
         except discord.HTTPException as err:
             log.error(f'Discord error adding reaction to message {message.id}: {err.status} {err.text}')
 
-    async def on_reaction_add(self, reaction, user):
+    async def on_reaction_add(self, reaction: discord.Reaction, _user: discord.User):
         '''
         Handles moderation of user reactions to messages.
         '''
@@ -155,7 +160,7 @@ class TessaDiscordBot(discord.Client):
         # TODO: REPEAT UNTIL THE REACTION IS FULLY GONE
         await message.clear_reaction(reaction)
 
-    async def _do_modlog_reaction(self, guild, reaction):
+    async def _do_modlog_reaction(self, guild: discord.Guild, reaction: discord.Reaction):
         '''
         Performs recording of a reaction infraction in the guild's log channel.
         '''
@@ -174,7 +179,7 @@ class TessaDiscordBot(discord.Client):
         modlog_channel = await guild.fetch_channel(modlog_cid)
         await modlog_channel.send(embed=log_embed)
 
-    def _modlog_channel_id(self, guild) -> int:
+    def _modlog_channel_id(self, guild: discord.Guild) -> int:
         '''
         Retrieves the numeric channel id for the guild's log channel.
         '''
@@ -182,7 +187,7 @@ class TessaDiscordBot(discord.Client):
             return self._guilds[guild.id]['event_log']
         return 0
 
-    def _channel_config(self, guild, channel) -> Optional[Dict[str, Any]]:
+    def _channel_config(self, guild: discord.Guild, channel: DiscordChannel) -> Optional[Dict[str, Any]]:
         '''
         Retrieves the channel configuration.
         '''
@@ -193,7 +198,7 @@ class TessaDiscordBot(discord.Client):
         else:
             return None
 
-    def _channel_autoemoji(self, guild, channel) -> List:
+    def _channel_autoemoji(self, guild: discord.Guild, channel: DiscordChannel) -> List:
         '''
         Retrieves the banned emojis list for the channel.
         '''
@@ -204,7 +209,7 @@ class TessaDiscordBot(discord.Client):
                 return self._autoemoji.get(preset, [])
         return []
 
-    def _channel_bademoji(self, guild, channel) -> List:
+    def _channel_bademoji(self, guild: discord.Guild, channel: DiscordChannel) -> List:
         '''
         Retrieves the banned emojis list for the channel.
         '''
@@ -215,14 +220,14 @@ class TessaDiscordBot(discord.Client):
                 return self._bademoji.get(preset, [])
         return []
 
-    def _is_auto_react_channel(self, guild, channel) -> bool:
+    def _is_auto_react_channel(self, guild: discord.Guild, channel: DiscordChannel) -> bool:
         '''
         Helper method to check if a guild+channel pair should have automatic reactions.
         '''
         channel_config = self._channel_config(guild, channel)
         return channel_config is not None and channel_config['auto_reactions']
 
-    def _is_moderated_channel(self, guild, channel) -> bool:
+    def _is_moderated_channel(self, guild: discord.Guild, channel: DiscordChannel) -> bool:
         '''
         Helper method to check if a guild+channel pair should have moderated reactions.
         '''

@@ -10,6 +10,6 @@ import lib.log as log
 import sys
 
 
-def die(msg):
+def die(msg: str):
     log.critical("*** {}".format(msg))
     sys.exit(42)
