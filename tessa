@@ -19,6 +19,7 @@ import jsonc_parser.errors
 
 #from lib.diag import die
 import lib.log as log
+import lib.strutil as strutil
 
 
 # Version number
@@ -59,6 +60,7 @@ class TessaDiscordBot(discord.Client):
         self._guilds = {}
         self._autoemoji = {}
         self._bademoji = {}
+        self._ignore_skintone = False
 
         intents = discord.Intents(guilds=True, guild_messages=True, guild_reactions=True)
         act = discord.Game(name='with your feelings')
@@ -99,9 +101,8 @@ class TessaDiscordBot(discord.Client):
             await message.clear_reactions()
             # Discord wants us to add the reactions one by one sadly
             for reaction in autoemoji:
-                new_reaction = discord.PartialEmoji.from_str(reaction)
-                log.debug(f'Reaction: emote {new_reaction.name}:{new_reaction.id}' if ':' in reaction else f'Reaction: Unicode {reaction}')
-                reaction_exec = asyncio.create_task(message.add_reaction(new_reaction))
+                log.debug(f'Reaction: emote {reaction!s}' if not reaction.is_unicode_emoji() else f'Reaction: Unicode {reaction!s}')
+                reaction_exec = asyncio.create_task(message.add_reaction(reaction))
                 await reaction_exec
         except discord.NotFound as err:
             log.error(f'Invalid or missing reaction emoji: {err.text}')
@@ -131,27 +132,17 @@ class TessaDiscordBot(discord.Client):
         log.debug(f'Reaction {reaction!s} on guild {message.guild.id} '
                   f'channel {message.channel.id} message {message.id}')
 
-        naughty = False
-        emoji = str(reaction)
-        if not emoji:
+        if not str(reaction):
             log.notice('Reaction is an empty string, is discord okay?')
             return
-        # Anything non-ASCII can't be a Discord implementation detail so it's
-        # got to be an emoji right?
-        if ord(emoji[0]) > 0x7F:
-            # NOTE: We're really just trying to ignore emoji modifiers. This is
-            # a very dirty hack but it should work for our use case.
-            for char in emoji:
-                if char in bademoji:
-                    naughty = True
-                    break
-        # Otherwise compare the sequence wholesale
-        elif emoji in bademoji:
-            naughty = True
-
-        if not naughty:
+        if isinstance(reaction.emoji, str): # Probably Unicode
+            is_bad = any(str(bad) == strutil.neutral_skintone(reaction.emoji) for bad in bademoji) \
+                     if self._ignore_skintone else \
+                     any(str(bad) == reaction.emoji for bad in bademoji)
+            if not is_bad:
+                return
+        elif not any(bad == reaction.emoji for bad in bademoji): # Custom
             return
-
         log.debug(f'Banned reaction {reaction!s} found on guild {message.guild.id} '
                   f'channel {message.channel.id} message {message.id}')
         # NOTE: we need to log the situation first, otherwise the list of users
@@ -239,6 +230,11 @@ class TessaDiscordBot(discord.Client):
         Processes the configuration JSON data.
         '''
         #
+        # General configuration
+        #
+        self._ignore_skintone = config.get('ignore_skintone', False)
+
+        #
         # Emoji presets (optional)
         #
         if 'presets' in config:
@@ -252,8 +248,15 @@ class TessaDiscordBot(discord.Client):
                 # May copy empty lists. This is intentional so we know they
                 # are empty for later. We ensure this way that both preset
                 # dicts have the same keys.
-                self._autoemoji[preset_id] = autoemoji.copy()
-                self._bademoji[preset_id] = bademoji.copy()
+                def copy_emoji_list(emojis: List[str], strip_skintone: bool = False) -> List:
+                    return [
+                        discord.PartialEmoji.from_str(
+                            strutil.neutral_skintone(emoji) if strip_skintone
+                            else emoji
+                        ) for emoji in emojis
+                    ]
+                self._autoemoji[preset_id] = copy_emoji_list(autoemoji)
+                self._bademoji[preset_id] = copy_emoji_list(bademoji, self._ignore_skintone)
                 if not autoemoji and not bademoji:
                     log.warning(f'Emoji preset {preset_id} has no automatic or '
                                 f'banned emoji configured, might be unintentional')

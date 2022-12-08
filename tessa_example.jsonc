@@ -7,6 +7,10 @@
 	//
 	"token": "SECRET TOKEN",
 
+	// Whether skintone modifiers are ignored when checking for banned reaction
+	// emojis. Note that this applies to ALL presets.
+	"ignore_skintone": true,
+
 	//
 	// Monitored guilds and channels
 	//
