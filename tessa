@@ -63,7 +63,7 @@ class TessaDiscordBot(discord.Client):
         self._ignore_skintone = False
 
         intents = discord.Intents(guilds=True, guild_messages=True, guild_reactions=True)
-        act = discord.Game(name='with your feelings')
+        act = discord.Activity(type=discord.ActivityType.watching, name='your reactions')
         status = discord.Status.dnd
 
         super().__init__(*args, **kwargs, intents=intents, activity=act, status=status)
