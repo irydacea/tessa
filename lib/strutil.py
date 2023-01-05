@@ -2,7 +2,7 @@
 '''
 codename Tessa
 
-Copyright (C) 2022 by Iris Morelle <iris@irydacea.me>
+Copyright (C) 2022 - 2023 by Iris Morelle <iris@irydacea.me>
 See COPYING for use and distribution terms.
 '''
 

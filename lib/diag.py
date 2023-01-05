@@ -2,7 +2,7 @@
 '''
 Wesnoth Site Status (codename Valen)
 
-Copyright (C) 2012 - 2022 by Iris Morelle <iris@irydacea.me>
+Copyright (C) 2012 - 2023 by Iris Morelle <iris@irydacea.me>
 See COPYING for use and distribution terms.
 '''
 
