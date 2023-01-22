@@ -67,6 +67,9 @@
 			"reactions": [
 				"💜", ":chickenemote:882609179460775936", "👀", "💎"
 			],
+			// Whether to shuffle posted reactions instead of posting them always in
+			// the same order.
+			"shuffle_reactions": false,
 			// Banned reaction emojis:
 			// These will be automatically deleted in channels that have
 			// reaction moderation enabled. As with automatic reaction

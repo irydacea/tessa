@@ -10,6 +10,7 @@ import argparse
 import asyncio
 import datetime
 import logging
+import random
 import sys
 from typing import Any, Dict, List, Optional, Mapping, Union
 
@@ -60,6 +61,7 @@ class TessaDiscordBot(discord.Client):
         self._guilds = {}
         self._autoemoji = {}
         self._bademoji = {}
+        self._shuffle_presets = {}
         self._ignore_skintone = False
 
         intents = discord.Intents(guilds=True, guild_messages=True, guild_reactions=True)
@@ -197,7 +199,10 @@ class TessaDiscordBot(discord.Client):
         if cfg:
             preset = cfg.get('preset', '')
             if preset:
-                return self._autoemoji.get(preset, [])
+                res = self._autoemoji.get(preset, [])
+                if self._shuffle_presets.get(preset, False):
+                    random.shuffle(res)
+                return res
         return []
 
     def _channel_bademoji(self, guild: discord.Guild, channel: DiscordChannel) -> List:
@@ -245,6 +250,7 @@ class TessaDiscordBot(discord.Client):
                 bademoji = preset_cfg.get('banned_reactions', [])
                 if len(autoemoji) > MAX_REACTIONS:
                     log.warning(f'Excessive number of reaction emojis ({len(autoemoji)} > {MAX_REACTIONS})')
+                shuffle = preset_cfg.get('shuffle_reactions', False)
                 # May copy empty lists. This is intentional so we know they
                 # are empty for later. We ensure this way that both preset
                 # dicts have the same keys.
@@ -257,6 +263,7 @@ class TessaDiscordBot(discord.Client):
                     ]
                 self._autoemoji[preset_id] = copy_emoji_list(autoemoji)
                 self._bademoji[preset_id] = copy_emoji_list(bademoji, self._ignore_skintone)
+                self._shuffle_presets[preset_id] = shuffle
                 if not autoemoji and not bademoji:
                     log.warning(f'Emoji preset {preset_id} has no automatic or '
                                 f'banned emoji configured, might be unintentional')
