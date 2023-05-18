@@ -280,7 +280,7 @@ class TessaDiscordBot(discord.Client):
                 if not guild_id: # Validation
                     raise TessaDiscordBot.ConfigError()
                 if not guild_cfg.get('enabled', True):
-                    log.debug(f'Skipping guild {guild_id} disabled by configuration')
+                    log.info(f'Guild {guild_id} disabled, ignoring configuration')
                     continue
                 guild_preset = str(guild_cfg.get('preset', ''))
                 # We only need to look at one of the emoji preset dicts because
