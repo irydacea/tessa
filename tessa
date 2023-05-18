@@ -186,8 +186,9 @@ class TessaDiscordBot(discord.Client):
         '''
         gid = guild.id
         chan = channel.id
-        if gid in self._guilds and chan in self._guilds[gid]['channels']:
-            return self._guilds[gid]['channels'][chan]
+        if gid in self._guilds:
+            guild_cfg = self._guilds[gid]['channels'][0]
+            return self._guilds[gid]['channels'].get(chan, guild_cfg)
         else:
             return None
 
@@ -287,11 +288,23 @@ class TessaDiscordBot(discord.Client):
                 # of the way we built them earlier.
                 if guild_preset and guild_preset not in self._autoemoji:
                     log.error(f'Unknown preset {guild_preset} set to guild default')
-                # TODO: maybe record guild preset for future reference?
+                guild_auto_reactions = bool(guild_cfg.get('auto_reactions', False))
+                guild_moderate_reactions = bool(guild_cfg.get('moderate_reactions', False))
                 self._guilds[guild_id] = {
                     'event_log': int(guild_cfg.get('event_log', 0)),
-                    'channels':  {}
+                    'channels': {
+                        # Channel 0 holds guild defaults for use later
+                        0: {
+                            'auto_reactions':     guild_auto_reactions,
+                            'moderate_reactions': guild_moderate_reactions,
+                            'preset':             guild_preset,
+                        }
+                    },
                 }
+                log.info(f'Guild {guild_id} - '
+                         f'preset {guild_preset} '
+                         f'auto: {guild_auto_reactions} '
+                         f'moderate: {guild_moderate_reactions}')
                 # Read channel configuration
                 for key in guild_cfg.keys():
                     if not key.isdigit():
@@ -299,29 +312,30 @@ class TessaDiscordBot(discord.Client):
                         continue
                     channel_cfg = guild_cfg[key]
                     channel_id = int(key)
-                    if not channel_id: # Validation
+                    #  Validation - channel 0 is reserved above for storing guild defaults
+                    if not channel_id:
                         raise TessaDiscordBot.ConfigError()
                     preset = str(channel_cfg.get('preset', guild_preset))
-                    auto_reactions = bool(channel_cfg.get('auto_reactions', False))
-                    moderate_reactions = bool(channel_cfg.get('moderate_reactions', False))
+                    auto_reactions = bool(channel_cfg.get('auto_reactions', guild_auto_reactions))
+                    moderate_reactions = bool(channel_cfg.get('moderate_reactions', guild_moderate_reactions))
                     if not preset:
-                        log.debug(f'Skipping channel {channel_id} with no configured preset')
+                        log.warning(f'Skipping channel {channel_id} with no configured preset')
                         continue
                     if preset not in self._autoemoji:
-                        log.debug(f'Skipping channel {channel_id} with unknown preset {preset}')
+                        log.warning(f'Skipping channel {channel_id} with unknown preset {preset}')
                         continue
                     if not auto_reactions and not moderate_reactions:
-                        log.debug(f'Skipping channel {channel_id} with no enabled actions')
+                        log.warning(f'Skipping channel {channel_id} with no enabled actions')
                         continue
                     self._guilds[guild_id]['channels'][channel_id] = {
                         'auto_reactions':     auto_reactions,
                         'moderate_reactions': moderate_reactions,
                         'preset':             preset,
                     }
-                    log.info(f'Monitoring guild {guild_id} channel {channel_id} '
-                             f'(preset: {preset} '
-                             f'auto reactions: {auto_reactions}, '
-                             f'moderate reactions: {moderate_reactions})')
+                    log.info(f'# Channel {channel_id} - '
+                             f'preset: {preset} '
+                             f'auto: {auto_reactions} '
+                             f'moderate: {moderate_reactions}')
         else:
             log.error('No guilds have been configured')
             # We really have nothing to do AT ALL without guilds

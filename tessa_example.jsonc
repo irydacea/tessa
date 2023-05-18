@@ -33,22 +33,33 @@
 			// Channel to use for logging moderation events in this guild.
 			// The channel should be accessible only to moderators but this is
 			// not enforced.
-			"event_log": "CHANNEL ID FOR MODERATION EVENT LOGGING", // default: 0 (no logging)
+			// (default value: 0 - no logging)
+			"event_log": "CHANNEL ID FOR MODERATION EVENT LOGGING",
+			// Enables or disables automatic adding of reactions to any newly
+			// posted messages on this guild's channels that the bot has
+			// Read Messages access to.
+			// (default value: false)
+			"auto_reactions": true,
+			// Enables or disables moderation of reactions by other users to
+			// any newly posted messages on this guild's channels that the bot
+			// has Read Messages access to.
+			// (default value: false)
+			"moderate_reactions": false,
 			// Per-channel configuration tables, using the channel's numeric
 			// identifier as the key. Multiple channels can be configured, all
 			// with their own channel identifier.
 			"12345678901234567890": {
 				// Enables or disables automatic adding of reactions to any
-				// newly posted messages on the channel.
-				// (default value: false)
+				// newly posted messages on this particular channel.
+				// (default value: inherited from guild)
 				"auto_reactions": true,
 				// Enables or disables moderation of reactions by other users
-				// to any newly posted messages on the channel.
-				// (default value: false)
+				// to any newly posted messages on this particular channel.
+				// (default value: inherited from guild)
 				"moderate_reactions": false,
 				// Overrides the guild's emoji configuration preset if one was
 				// specified.
-				// (default value: guild's preset or none)
+				// (default value: inherited from guild)
 				"preset": "Another Example Preset"
 			}
 		}
