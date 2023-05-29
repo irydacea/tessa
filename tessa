@@ -165,10 +165,10 @@ class TessaDiscordBot(discord.Client):
         if not modlog_cid:
             return
         # Odds are there's only gonna be one mention, but anyway
-        reactor_mentions = ', '.join([user.mention async for user in reaction.users()])
-        embed_body = (f'**Deleted bad reaction in {reaction.message.channel.mention!s} '
-                      f'by {reactor_mentions!s}**\n'
-                      f'{reaction!s} - [Jump to message]({reaction.message.jump_url!s})')
+        reactor_mentions = '\n'.join(['* {!s} — `{!s}#{!s} {!s}`'.format(user.mention, user.name, user.discriminator, user.id) async for user in reaction.users()])
+        embed_body = (f'**Deleted bad reaction {reaction!s} in {reaction.message.channel.mention!s} by**\n'
+                      f'{reactor_mentions!s}\n'
+                      f'[Jump to message]({reaction.message.jump_url!s})')
         log_embed = discord.Embed(
             colour=discord.Colour.fuchsia(),
             description=embed_body,
