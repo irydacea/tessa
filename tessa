@@ -37,6 +37,8 @@ DiscordChannel = Union[discord.TextChannel, discord.VoiceChannel, discord.StageC
                        discord.ForumChannel, discord.Thread, discord.DMChannel, discord.GroupChannel,
                        discord.PartialMessageable]
 
+DiscordUser = Union[discord.User, discord.Member]
+
 
 class TessaDiscordBot(discord.Client):
     '''
@@ -157,6 +159,20 @@ class TessaDiscordBot(discord.Client):
         # TODO: REPEAT UNTIL THE REACTION IS FULLY GONE
         await message.clear_reaction(reaction)
 
+    @staticmethod
+    def _log_format_user(user: DiscordUser) -> str:
+        '''
+        Formats a username in a manner suitable for log display.
+
+        The resulting string will look like "username" for new-style Discord
+        usernames, or "username#1234" for old-style Discord usernames that have
+        a valid discriminator.
+        '''
+        if user.discriminator == '0':
+            return f'{user.mention} `{user.name} {user.id}`'
+        else:
+            return f'{user.mention} `{user.name}#{user.discriminator} {user.id}`'
+
     async def _do_modlog_reaction(self, guild: discord.Guild, reaction: discord.Reaction):
         '''
         Performs recording of a reaction infraction in the guild's log channel.
@@ -165,7 +181,7 @@ class TessaDiscordBot(discord.Client):
         if not modlog_cid:
             return
         # Odds are there's only gonna be one mention, but anyway
-        reactor_mentions = '\n'.join(['* {!s} — `{!s}#{!s} {!s}`'.format(user.mention, user.name, user.discriminator, user.id) async for user in reaction.users()])
+        reactor_mentions = '\n'.join([f'* {self._log_format_user(user)}' async for user in reaction.users()])
         embed_body = (f'**Deleted bad reaction {reaction!s} in {reaction.message.channel.mention!s} by**\n'
                       f'{reactor_mentions!s}\n'
                       f'[Jump to message]({reaction.message.jump_url!s})')
