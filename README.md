@@ -28,8 +28,6 @@ process.
 
 `tessa` supports a few additional command line arguments:
 
-* `-v / --verbose`
-  Increases log verbosity for diagnostic purposes.
 * `-d / --debug`
   Increases log verbosity to the absolute maximum for hacking and debugging.
 
