@@ -370,9 +370,6 @@ def main():
     parser.add_argument('-d, --debug', action='store_true', dest='debug',
                         default=False,
                         help='prints extra debugging information')
-    parser.add_argument('-v', '--verbose', action='store_true', dest='verbose',
-                        default=False,
-                        help='prints more information about actions')
     parser.add_argument('-c', '--config', action='store', type=str, dest='config',
                         default=CONFIG_FILE_PATH,
                         help='specifies the path to the Tessa configuration JSON file')
@@ -383,11 +380,8 @@ def main():
     Config file path: {args.config}
 ''')
 
-    logging.basicConfig(level=logging.WARNING)
+    logging.basicConfig(level=logging.INFO)
 
-    if args.verbose:
-        log.set_log_level(log.LOG_LEVEL_INFO)
-        logging.basicConfig(level=logging.INFO)
     if args.debug:
         log.set_log_level(log.LOG_LEVEL_DEBUG)
         logging.basicConfig(level=logging.DEBUG)
