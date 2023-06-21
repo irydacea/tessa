@@ -18,8 +18,6 @@ import discord
 from jsonc_parser.parser import JsoncParser
 import jsonc_parser.errors
 
-#from lib.diag import die
-import lib.log as log
 import lib.strutil as strutil
 
 
@@ -38,6 +36,8 @@ DiscordChannel = Union[discord.TextChannel, discord.VoiceChannel, discord.StageC
                        discord.PartialMessageable]
 
 DiscordUser = Union[discord.User, discord.Member]
+
+log = logging.getLogger('tessa')
 
 
 class TessaDiscordBot(discord.Client):
@@ -76,13 +76,13 @@ class TessaDiscordBot(discord.Client):
         '''
         Handles the on_connect event.
         '''
-        log.notice('Connected to Discord')
+        log.info('Connected to Discord')
 
     async def on_ready(self):
         '''
         Handles the on_ready event.
         '''
-        log.notice(f'Joined Discord as {self.user}')
+        log.info(f'Joined Discord as {self.user}')
 
     async def on_message(self, message: discord.Message):
         '''
@@ -141,7 +141,7 @@ class TessaDiscordBot(discord.Client):
                   f'channel {message.channel.id} message {message.id}')
 
         if not str(reaction):
-            log.notice('Reaction is an empty string, is discord okay?')
+            log.warning('Reaction is an empty string, is discord okay?')
             return
         if isinstance(reaction.emoji, str): # Probably Unicode
             is_bad = any(str(bad) == strutil.neutral_skintone(reaction.emoji) for bad in bademoji) \
@@ -380,11 +380,16 @@ def main():
     Config file path: {args.config}
 ''')
 
-    logging.basicConfig(level=logging.INFO)
-
-    if args.debug:
-        log.set_log_level(log.LOG_LEVEL_DEBUG)
-        logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(format='[%(asctime)s %(name)s %(levelname)s] %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S',
+                        level=logging.DEBUG if args.debug else logging.INFO)
+    for level in [logging.CRITICAL,
+                  logging.ERROR,
+                  logging.WARNING,
+                  logging.INFO,
+                  logging.DEBUG]:
+        # Sorry, I just hate logging YELLING IN MY FACE ALL THE TIME
+        logging.addLevelName(level, logging.getLevelName(level).lower())
 
     config_fn = args.config
     config = None
