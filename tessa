@@ -143,13 +143,13 @@ class TessaDiscordBot(discord.Client):
         if not str(reaction):
             log.warning('Reaction is an empty string, is discord okay?')
             return
-        if isinstance(reaction.emoji, str): # Probably Unicode
+        if isinstance(reaction.emoji, str):  # Probably Unicode
             is_bad = any(str(bad) == strutil.neutral_skintone(reaction.emoji) for bad in bademoji) \
                      if self._ignore_skintone else \
                      any(str(bad) == reaction.emoji for bad in bademoji)
             if not is_bad:
                 return
-        elif not any(bad == reaction.emoji for bad in bademoji): # Custom
+        elif not any(bad == reaction.emoji for bad in bademoji):  # Custom
             return
         log.debug(f'Banned reaction {reaction!s} found on guild {message.guild.id} '
                   f'channel {message.channel.id} message {message.id}')
@@ -266,12 +266,13 @@ class TessaDiscordBot(discord.Client):
         if 'presets' in config:
             presets = config['presets']
             for key, preset_cfg in presets.items():
-                preset_id = str(key) # Just to make sure it's all nice for later
+                preset_id = str(key)  # Just to make sure it's all nice for later
                 autoemoji = preset_cfg.get('reactions', [])
                 bademoji = preset_cfg.get('banned_reactions', [])
                 if len(autoemoji) > MAX_REACTIONS:
                     log.warning(f'Excessive number of reaction emojis ({len(autoemoji)} > {MAX_REACTIONS})')
                 shuffle = preset_cfg.get('shuffle_reactions', False)
+
                 # May copy empty lists. This is intentional so we know they
                 # are empty for later. We ensure this way that both preset
                 # dicts have the same keys.
@@ -282,6 +283,7 @@ class TessaDiscordBot(discord.Client):
                             else emoji
                         ) for emoji in emojis
                     ]
+
                 self._autoemoji[preset_id] = copy_emoji_list(autoemoji)
                 self._bademoji[preset_id] = copy_emoji_list(bademoji, self._ignore_skintone)
                 self._shuffle_presets[preset_id] = shuffle
@@ -298,7 +300,7 @@ class TessaDiscordBot(discord.Client):
             guilds = config['guilds']
             for guild_id_str, guild_cfg in guilds.items():
                 guild_id = int(guild_id_str)
-                if not guild_id: # Validation
+                if not guild_id:  # Validation
                     raise TessaDiscordBot.ConfigError()
                 if not guild_cfg.get('enabled', True):
                     log.info(f'Guild {guild_id} disabled, ignoring configuration')
@@ -357,9 +359,8 @@ class TessaDiscordBot(discord.Client):
                              f'auto: {auto_reactions} '
                              f'moderate: {moderate_reactions}')
         else:
-            log.error('No guilds have been configured')
             # We really have nothing to do AT ALL without guilds
-            #return
+            log.error('No guilds have been configured')
 
 
 def main():
