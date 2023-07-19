@@ -119,22 +119,32 @@ class TessaDiscordBot(discord.Client):
         except discord.HTTPException as err:
             log.error(f'Discord error adding reaction to message {message.id}: {err.status} {err.text}')
 
-    async def on_reaction_add(self, reaction: discord.Reaction, _user: discord.User):
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
         '''
         Handles moderation of user reactions to messages.
         '''
-        # NOTE: We use on_reaction_add here, not on_raw_reaction_add, so there's a risk
-        #       that reactions on uncached messages will happen and we won't hear of them.
-        #       For our use case this is a good enough compromise.
-        if reaction.me:
+        if payload.user_id == self.user.id or \
+           not all((payload.guild_id, payload.channel_id, payload.message_id)):
             return
-        message = reaction.message
-        if message.guild is None or message.channel is None:
-            return
-        if not self._is_moderated_channel(message.guild, message.channel):
+        guild = self.get_guild(payload.guild_id)
+        channel = self.get_channel(payload.channel_id)
+        message = await channel.fetch_message(payload.message_id)
+        # user = self.get_user(payload.user_id)
+        if not self._is_moderated_channel(guild, channel):
             return
         bademoji = self._channel_bademoji(message.guild, message.channel)
         if not bademoji:
+            return
+        # We only have a PartialEmoji to work with. This is a very dumb
+        # comparison but it works in all cases as far as I can tell. Note that
+        # we MUST cast with str(), otherwise the == operation is not quite
+        # workable between different emoji types (Emoji, PartialEmoji, str).
+        reaction = next((r for r in message.reactions
+                         if str(r.emoji) == str(payload.emoji)), None)
+        if not reaction:
+            # The reaction may have already been deleted while we were
+            # fetching the message.
+            log.debug('Reaction disappeared during handling prologue!')
             return
 
         log.debug(f'Reaction {reaction!s} on guild {message.guild.id} '
