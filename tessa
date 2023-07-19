@@ -261,9 +261,11 @@ class TessaDiscordBot(discord.Client):
         channel_config = self._channel_config(guild, channel)
         return channel_config is not None and channel_config['moderate_reactions']
 
-    def read_config(self, config: Mapping[str, Any]):
+    def read_config(self, config: Mapping[str, Any]) -> bool:
         '''
         Processes the configuration JSON data.
+
+        Returns True if the configuration is valid, False otherwise.
         '''
         #
         # General configuration
@@ -368,9 +370,11 @@ class TessaDiscordBot(discord.Client):
                              f'preset: {preset} '
                              f'auto: {auto_reactions} '
                              f'moderate: {moderate_reactions}')
+            return True
         else:
             # We really have nothing to do AT ALL without guilds
             log.error('No guilds have been configured')
+            return False
 
 
 def main():
@@ -417,7 +421,9 @@ def main():
         sys.exit(1)
 
     client = TessaDiscordBot()
-    client.read_config(config)
+    if not client.read_config(config):
+        log.error('Invalid configuration found. Cannot continue.')
+        sys.exit(1)
     client.run(discord_token)
 
 
