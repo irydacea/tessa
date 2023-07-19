@@ -1,7 +1,8 @@
 # Tessa - Discord reactions bot
 
 `tessa` is a very simple Discord.py bot that automatically adds configured
-reactions to any message posted in the specified channels.
+reactions to any message posted in the specified channels. It also includes
+functionality to ban configured reaction emojis for moderation purposes.
 
 ## Installation
 
