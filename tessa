@@ -22,7 +22,7 @@ import lib.strutil as strutil
 
 
 # Version number
-TESSA_VERSION = '0.0.1'
+TESSA_VERSION = '0.1.0'
 
 # Configuration file path (override with -c/--config)
 CONFIG_FILE_PATH = './tessa.jsonc'
