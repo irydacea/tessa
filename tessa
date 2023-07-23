@@ -134,6 +134,27 @@ class TessaDiscordBot(discord.Client):
         bademoji = self._channel_bademoji(guild, channel)
         if not bademoji:
             return
+
+        emoji_str = str(payload.emoji)
+        log.debug(f'Reaction {emoji_str} on guild {guild.id} '
+                  f'channel {channel.id} message {payload.message_id}')
+        if not payload.emoji or not emoji_str:
+            log.warning('Missing emoji in reaction payload, is discord okay?')
+            return
+        # Discord custom emoji are wrapped in angle brackets, while Unicode
+        # emoji are not.
+        if emoji_str[0] != '<':
+            is_bad = any(str(bad) == strutil.neutral_skintone(emoji_str) for bad in bademoji) \
+                     if self._ignore_skintone else \
+                     any(str(bad) == emoji_str for bad in bademoji)
+            if not is_bad:
+                return
+        elif not any(str(bad) == emoji_str for bad in bademoji):
+            return
+        # If we got here it's a banned emoji
+        log.debug(f'Banned reaction {emoji_str} found on guild {guild.id} '
+                  f'channel {channel.id} message {payload.message_id}')
+        # For the next step we really need to know the message in full...
         # First see if we can find the message in the cache so Discord doesn't
         # punish us for fetching messages too quickly in a high-traffic guild
         # (thanks Trissie for being a living API rate limiting magnet).
@@ -150,29 +171,12 @@ class TessaDiscordBot(discord.Client):
         # we MUST cast with str(), otherwise the == operation is not quite
         # workable between different emoji types (Emoji, PartialEmoji, str).
         reaction = next((r for r in message.reactions
-                         if str(r.emoji) == str(payload.emoji)), None)
+                         if str(r.emoji) == emoji_str), None)
         if not reaction:
             # The reaction may have already been deleted while we were
             # fetching the message.
-            log.debug('Reaction disappeared during handling prologue!')
+            log.debug('Reaction disappeared before it could be moderated')
             return
-
-        log.debug(f'Reaction {reaction!s} on guild {message.guild.id} '
-                  f'channel {message.channel.id} message {message.id}')
-
-        if not str(reaction):
-            log.warning('Reaction is an empty string, is discord okay?')
-            return
-        if isinstance(reaction.emoji, str):  # Probably Unicode
-            is_bad = any(str(bad) == strutil.neutral_skintone(reaction.emoji) for bad in bademoji) \
-                     if self._ignore_skintone else \
-                     any(str(bad) == reaction.emoji for bad in bademoji)
-            if not is_bad:
-                return
-        elif not any(bad == reaction.emoji for bad in bademoji):  # Custom
-            return
-        log.debug(f'Banned reaction {reaction!s} found on guild {message.guild.id} '
-                  f'channel {message.channel.id} message {message.id}')
         # NOTE: we need to log the situation first, otherwise the list of users
         #       who reacted to the message is lost
         await self._do_modlog_reaction(message.guild, reaction)

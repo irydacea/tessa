@@ -73,10 +73,10 @@
 		"Example Preset": {
 			// Automatic reaction emojis:
 			// A maximum of 20 emojis may be used. Custom guild emojis may be provided
-			// in ":name:ID" format, which can be obtained by preceding the emoji with
-			// a backslash when entering it in the client.
+			// in "<:name:ID>"/"<a:name:ID>" format, which can be obtained by preceding
+			// the emoji with a backslash when entering it in the client.
 			"reactions": [
-				"💜", ":chickenemote:882609179460775936", "👀", "💎"
+				"💜", "<:chickenemote:882609179460775936>", "👀", "💎"
 			],
 			// Whether to shuffle posted reactions instead of posting them always in
 			// the same order.
