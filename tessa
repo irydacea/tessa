@@ -126,8 +126,14 @@ class TessaDiscordBot(discord.Client):
         if payload.user_id == self.user.id or \
            not all((payload.guild_id, payload.channel_id, payload.message_id)):
             return
+        # user = self.get_user(payload.user_id)
         guild = self.get_guild(payload.guild_id)
         channel = self.get_channel(payload.channel_id)
+        if not self._is_moderated_channel(guild, channel):
+            return
+        bademoji = self._channel_bademoji(guild, channel)
+        if not bademoji:
+            return
         # First see if we can find the message in the cache so Discord doesn't
         # punish us for fetching messages too quickly in a high-traffic guild
         # (thanks Trissie for being a living API rate limiting magnet).
@@ -139,12 +145,6 @@ class TessaDiscordBot(discord.Client):
             if message is None:
                 log.debug(f'Moderated message {payload.message_id} disappeared during prologue')
                 return
-        # user = self.get_user(payload.user_id)
-        if not self._is_moderated_channel(guild, channel):
-            return
-        bademoji = self._channel_bademoji(message.guild, message.channel)
-        if not bademoji:
-            return
         # We only have a PartialEmoji to work with. This is a very dumb
         # comparison but it works in all cases as far as I can tell. Note that
         # we MUST cast with str(), otherwise the == operation is not quite
