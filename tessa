@@ -101,20 +101,9 @@ class TessaDiscordBot(discord.Client):
         log.debug(f'Guild {message.guild.id} channel {message.channel.id} '
                   f'message {message.id}')
 
-        try:
-            # Clear existing reactions in case the bot is running behind other
-            # guild members' ability to react to messages
-            await message.clear_reactions()
-            # Discord wants us to add the reactions one by one sadly
-            for reaction in autoemoji:
-                await self._do_auto_react(message, reaction)
-        except discord.NotFound as err:
-            log.error(f'Invalid/missing message: {err.text}')
-        except discord.RateLimited as err:
-            log.error('Discord rate limit exceeded')
-            await asyncio.sleep(err.retry_after)
-        except discord.HTTPException as err:
-            log.error(f'Discord error adding reaction to message {message.id}: {err.status} {err.text}')
+        # Discord wants us to add the reactions one by one sadly
+        for emoji in autoemoji:
+            await self._do_auto_react(message, emoji)
 
     async def _do_auto_react(self,
                              message: discord.Message,
