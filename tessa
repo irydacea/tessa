@@ -107,17 +107,40 @@ class TessaDiscordBot(discord.Client):
             await message.clear_reactions()
             # Discord wants us to add the reactions one by one sadly
             for reaction in autoemoji:
-                log.debug(f'Reaction: emote {reaction!s}' if not reaction.is_unicode_emoji() else f'Reaction: Unicode {reaction!s}')
-                reaction_exec = asyncio.create_task(message.add_reaction(reaction))
-                await reaction_exec
+                await self._do_auto_react(message, reaction)
         except discord.NotFound as err:
-            log.error(f'Invalid or missing reaction emoji: {err.text}')
+            log.error(f'Invalid/missing message: {err.text}')
         except discord.RateLimited as err:
-            # This is global so may as well block the entire client on this
-            log.error(f'Discord rate limit exceeded, waiting {err.retry_after}s')
+            log.error('Discord rate limit exceeded')
             await asyncio.sleep(err.retry_after)
         except discord.HTTPException as err:
             log.error(f'Discord error adding reaction to message {message.id}: {err.status} {err.text}')
+
+    async def _do_auto_react(self,
+                             message: discord.Message,
+                             emoji: discord.PartialEmoji):
+        '''
+        Posts a single automatic reaction emoji, watching for errors.
+        '''
+        attempt_num = 0
+        while attempt_num < 3:
+            attempt_num += 1
+            log.debug(f'Automatic reaction ({message.id}) ({attempt_num}): {emoji!s}')
+            try:
+                await message.add_reaction(emoji)
+            except discord.NotFound as err:
+                log.error(f'Invalid/missing automatic reaction emoji or target: {err.text}')
+            except discord.RateLimited as err:
+                if attempt_num < 3:
+                    log.error(f'Discord rate limit exceeded, trying to post reaction again in {err.retry_after}s')
+                else:
+                    log.error('Discord rate limit exceeded, abandoning reaction post')
+                await asyncio.sleep(err.retry_after)
+                continue
+            except discord.HTTPException as err:
+                log.error(f'Discord error adding reaction to message {message.id}: {err.status} {err.text}')
+            # Do not retry if we weren't rate-limited.
+            return
 
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
         '''
