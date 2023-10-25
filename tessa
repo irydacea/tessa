@@ -256,10 +256,10 @@ class TessaDiscordBot(discord.Client):
         if cfg:
             preset = cfg.get('preset', '')
             if preset:
-                res = self._autoemoji.get(preset, [])
+                res = self._autoemoji.get(preset, []).copy()
                 if self._shuffle_presets.get(preset, False):
                     random.shuffle(res)
-                return res
+                return res[:MAX_REACTIONS]
         return []
 
     def _channel_bademoji(self, guild: discord.Guild, channel: DiscordChannel) -> List:
@@ -309,6 +309,7 @@ class TessaDiscordBot(discord.Client):
                 bademoji = preset_cfg.get('banned_reactions', [])
                 if len(autoemoji) > MAX_REACTIONS:
                     log.warning(f'Excessive number of reaction emojis ({len(autoemoji)} > {MAX_REACTIONS})')
+                    log.warning(f'Only {MAX_REACTIONS} emojis from this preset will be posted')
                 shuffle = preset_cfg.get('shuffle_reactions', False)
 
                 # May copy empty lists. This is intentional so we know they
