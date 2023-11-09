@@ -187,10 +187,25 @@ class TessaDiscordBot(discord.Client):
         if reaction:
             # Retrieve list of reactioners in advance before clearing reactions
             reactors = [user async for user in reaction.users()]
-            if reactors:
-                # Bye bye
-                await message.clear_reaction(reaction)
-                await self._do_modlog_reaction(message.guild, reaction, reactors)
+            if not reactors and payload.user_id:
+                # We lost the user list for some reason (or it's a super
+                # reaction since discord.py cannot retrieve the user list for
+                # those as of version 2.3.2 for some reason?? (FIXME)) so just use
+                # the user id from the payload and hope there weren't more
+                # people on the list...
+                reactor = self.get_user(payload.user_id)
+                if not reactor:
+                    reactor = await self.fetch_user(payload.user_id)  # slowwwww
+                if not reactor:
+                    log.error('Reaction is by unidentifiable user')
+                else:
+                    reactors = [reactor]
+                log.warning('Reaction appears to be a burst reaction, user list in mod log may be incomplete')
+            # Bye bye
+            await message.clear_reaction(reaction)
+            if not reactors:
+                log.error('Could not retrieve list of reactors for mod log')
+            await self._do_modlog_reaction(message.guild, reaction, reactors)
             return
         # The reaction may have already been deleted while we were
         # fetching the message.
@@ -222,11 +237,10 @@ class TessaDiscordBot(discord.Client):
         modlog_cid = self._modlog_channel_id(guild)
         if not modlog_cid:
             return
-        if not reactors:
-            log.warning('No reactioners provided for modlog event')
-            return
         # Odds are there's only gonna be one mention
-        if len(reactors) > 1:
+        if len(reactors) == 0:
+            reactor_mentions = '<unidentified user(s)>'
+        elif len(reactors) > 1:
             reactor_mentions = '\n' + '\n'.join([f'* {self._log_format_user(user)}' for user in reactors])
         else:
             reactor_mentions = self._log_format_user(reactors[0])
@@ -237,9 +251,11 @@ class TessaDiscordBot(discord.Client):
             colour=discord.Colour.fuchsia(),
             description=body,
             timestamp=datetime.datetime.now())
+        avatar = reactors[0].display_avatar.url if reactors else None
         log_embed.set_author(name='Bad reaction deleted',
-                             icon_url=reactors[0].display_avatar.url)
-        log_embed.set_thumbnail(url=reactors[0].display_avatar.url)
+                             icon_url=avatar)
+        if avatar:
+            log_embed.set_thumbnail(url=avatar)
         modlog_channel = await guild.fetch_channel(modlog_cid)
         await modlog_channel.send(embed=log_embed)
 
