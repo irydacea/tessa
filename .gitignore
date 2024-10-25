@@ -1,5 +1,6 @@
 __pycache__/
 .vscode/
+.venv/
 
 # This file contains sensitive information in the form of Discord
 # client tokens, so it should never be added to VCS.
