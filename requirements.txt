@@ -1,5 +1,2 @@
 discord.py
 jsonc_parser
-# <https://github.com/Rapptz/discord.py/issues/9742>
-# Fixed upstream but not released yet as of 2024-10-25
-audioop-lts; python_version>='3.13'
